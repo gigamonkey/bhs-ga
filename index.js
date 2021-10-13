@@ -53,12 +53,8 @@ function makeBabies(parents) {
 function cross(p1, p2) {
   let cross = Math.floor(Math.random() * p1.length);
   return [
-    Array.from(p1)
-      .map((c, i) => (i > cross ? p2[i] : c))
-      .join(""),
-    Array.from(p2)
-      .map((c, i) => (i > cross ? p1[i] : c))
-      .join(""),
+    Array.from(p1).map((c, i) => (i > cross ? p2[i] : c)).join(""),
+    Array.from(p2).map((c, i) => (i > cross ? p1[i] : c)).join(""),
   ];
 }
 
