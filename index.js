@@ -34,7 +34,7 @@ function randomCharacter() {
 function selectParents(population, scores) {
   return Array.from(population)
     .sort((a, b) => scores[b] - scores[a])
-    .slice(0, Math.floor(population.length/2));
+    .slice(0, Math.floor(population.length / 2));
 }
 
 function makeBabies(parents) {
@@ -53,8 +53,12 @@ function makeBabies(parents) {
 function cross(p1, p2) {
   let cross = Math.floor(Math.random() * p1.length);
   return [
-    Array.from(p1).map((c, i) => i > cross ? p2[i] : c).join(""),
-    Array.from(p2).map((c, i) => i > cross ? p1[i] : c).join(""),
+    Array.from(p1)
+      .map((c, i) => (i > cross ? p2[i] : c))
+      .join(""),
+    Array.from(p2)
+      .map((c, i) => (i > cross ? p1[i] : c))
+      .join(""),
   ];
 }
 
@@ -76,13 +80,15 @@ function allScores(target, population) {
 }
 
 function scoreCritter(target, critter) {
-  return Array.from(critter).map((c, i) => target[i] === c ? 1 : 0).reduce((a, b) => a + b);
+  return Array.from(critter)
+    .map((c, i) => (target[i] === c ? 1 : 0))
+    .reduce((a, b) => a + b);
 }
 
 function logCurrentState(i, scores, population, mostFit) {
   let num = 0;
-  let best = -1/0;
-  let worst = 1/0;
+  let best = -Infinity;
+  let worst = Infinity;
   for (let critter in scores) {
     num++;
     best = Math.max(best, scores[critter]);
