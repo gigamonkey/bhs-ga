@@ -81,22 +81,14 @@ function scoreCritter(target, critter) {
 }
 
 function logCurrentState(i, scores, population, mostFit) {
-  let num = 0;
-  let best = -Infinity;
-  let worst = Infinity;
-  for (let critter in scores) {
-    num++;
-    best = Math.max(best, scores[critter]);
-    worst = Math.min(worst, scores[critter]);
-  }
-  let avg = averageFitness(scores, population);
+  let num = Object.keys(scores).length;
+  let best = Object.values(scores).reduce((a, b) => Math.max(a, b), -Infinity);
+  let worst = Object.values(scores).reduce((a, b) => Math.min(a, b), +Infinity);
+  let avg = Array.from(population).reduce((acc, c) => acc + scores[c], 0) / population.length;
+  
   console.log(`Generation ${i}: ${num} unique critters out of ${population.length}`);
   console.log(`Average fitness: ${avg}. Most fit: ${best}. Least fit: ${worst}`);
   console.log(`Current best: ${mostFit}\n`);
-}
-
-function averageFitness(scores, population) {
-  return Array.from(population).reduce((acc, c) => acc + scores[c], 0) / population.length;
 }
 
 function shuffleArray(array) {
