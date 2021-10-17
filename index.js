@@ -1,11 +1,10 @@
 const letters = "abcdefghijklmnopqrstuvwxyz";
 const digits = "0123456789";
 const alphabet = letters + letters.toUpperCase() + digits + " .,;:!?";
-const phrase = "To be or not to be, that is the question.";
 
-const mutationRate = 0.01;
+const phrase = "To be, or not to be, that is the question.";
 
-function run(target, populationSize, maxGenerations) {
+function run(target, populationSize, maxGenerations, mutationRate = 0.01) {
   let population = randomPopulation(populationSize, target.length);
   for (let i = 0; i < maxGenerations; i++) {
     let scores = allScores(target, population);
@@ -15,7 +14,7 @@ function run(target, populationSize, maxGenerations) {
     if (currentBest === target) {
       break;
     }
-    population = makeBabies(parents);
+    population = makeBabies(parents, mutationRate);
   }
 }
 
@@ -37,13 +36,13 @@ function selectParents(population, scores) {
     .slice(0, Math.floor(population.length / 2));
 }
 
-function makeBabies(parents) {
+function makeBabies(parents, mutationRate) {
   let matches = shuffleArray(Array.from(parents));
   let babies = [];
   for (let i = 0; i < matches.length - 1; i += 2) {
     for (let j = 0; j < 2; j++) {
       for (let b of cross(matches[i], matches[i + 1])) {
-        babies.push(mutate(b));
+        babies.push(mutate(b, mutationRate));
       }
     }
   }
@@ -90,9 +89,14 @@ function logCurrentState(i, scores, population, mostFit) {
     best = Math.max(best, scores[critter]);
     worst = Math.min(worst, scores[critter]);
   }
-  console.log("Generation " + i + ": " + num + " unique critters out of " + population.length);
-  console.log("Most fit: " + best + ". Least fit: " + worst);
-  console.log("Current best: " + mostFit + "\n");
+  let avg = averageFitness(scores, population);
+  console.log(`Generation ${i}: ${num} unique critters out of ${population.length}`);
+  console.log(`Average fitness: ${avg}. Most fit: ${best}. Least fit: ${worst}`);
+  console.log(`Current best: ${mostFit}\n`);
+}
+
+function averageFitness(scores, population) {
+  return Array.from(population).reduce((acc, c) => acc + scores[c], 0) / population.length;
 }
 
 function shuffleArray(array) {
@@ -102,3 +106,5 @@ function shuffleArray(array) {
   }
   return array;
 }
+
+run(phrase, 2000, 100);
