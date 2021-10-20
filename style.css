@@ -1,8 +1,20 @@
-#results div {
-  padding-top: 1em;
+body {
+  font-family: "Gill Sans", sans-serif;
+  font-weight: 300;
 }
 
-#results div p {
-  padding: 0;
-  margin: 0;
+table { width: 100%; }
+
+th, td {
+  padding: 6px;
+  text-align: center;
+}
+td:last-child {
+  font-family: monospace;
+}
+tbody tr:nth-child(odd) {
+  background: rgba(0, 0, 200, 0.08);
+}
+tbody tr:nth-child(even) {
+  background: rgba(100, 100, 100, 0.08);
 }

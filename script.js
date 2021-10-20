@@ -133,19 +133,19 @@ function fitnessWeighted(scored, size) {
 
 function logHTML(generation, scored) {
   let s = summarize(generation, scored);
-  let div = document.createElement("div");
 
+  let tbody = document.getElementById("results");
+  let row = tbody.insertRow();
+  
   function log(x) {
-    let e = document.createElement("p");
-    e.innerHTML = x;
-    div.append(e);
+    row.insertCell().appendChild(document.createTextNode(x));
   }
-
-  log(`Generation ${s.generation}: ${s.unique} unique critters out of ${s.size}`);
-  log(`Most fit: ${s.max.toFixed(2)}. Average: ${s.avg.toFixed(2)}. Least fit: ${s.min.toFixed(2)}`);
-  log(`Current best: ${s.best}\n`);
-
-  document.getElementById("results").append(div);
+  log(s.generation);
+  log(s.unique);
+  log(s.max.toFixed(2));
+  log(s.avg.toFixed(2));
+  log(s.min.toFixed(2));
+  log(s.best);
 
 }
 
