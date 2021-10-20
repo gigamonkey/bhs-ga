@@ -3,96 +3,155 @@ const digits = "0123456789";
 const alphabet = letters + letters.toUpperCase() + digits + " .,;:!?";
 const phrase = "To be, or not to be, that is the question.";
 
-function run(target, populationSize, maxGenerations, mutationRate = 0.01) {
-  let population = randomPopulation(populationSize, target.length);
-  let best = null;
-  for (let i = 0; i < maxGenerations && best !== target; i++) {
-    let scores = allScores(target, population);
-    best = currentBest(population, scores);
-    logCurrentState(i, scores, population, best);
-    let parents = selectParents(population, scores);
-    population = makeBabies(parents, mutationRate);
+// Specific to a given problem:
+//
+//   - Genetic encoding of solutions.
+//   - How to generate a random gene sequence
+//   - The fitness function.
+//   - Crossing strategy.
+//   - Mutation strategy
+//
+// Some parts of the crossing and mutation strategies may be
+// general (e.g. cross by split at a random point and swap the
+// two parts or mutate by changing one gene to a random element
+// of the genetic alphabet) but which ones should be used is
+// still dependent on the particular genetic encoding.
+
+// General to all genetic algorithms: The basic structure 
+//
+//   - Create initial population
+//   - Loop scoring fitness, choosing parents, making new population.
+//   - Deciding how to stop: max number of generations or fitness threshold.
+//
+// Choosing the parents we'll consider part of the genetic algorithm,
+// not the problem though in theory one could use knowledge of the
+// problem to choose pairings other than random matching.
+
+/*
+ * Solve the "find a known phrase" problem.
+ */
+class PhraseGeneration {
+  constructor(target, alphabet) {
+    this.target = target;
+    this.alphabet = alphabet;
   }
+
+  randomGene() {
+    return choose(this.alphabet);
+  }
+
+  randomDNA() {
+    return Array(this.target.length).fill().map(() => this.randomGene()).join("");
+  }
+
+  fitness(critter) {
+    return Array.from(critter).map((c, i) => this.target[i] == critter[i] ? 1 : 0).reduce((a, b) => a + b) / this.target.length;
+  }
+
+  cross(p1, p2) {
+    let cross = Math.floor(Math.random() * p1.length);
+    return p1.substring(0, cross) + p2.substring(cross);
+  }
+
+  mutate(critter, rate) {
+    return Array.from(critter).map(c => Math.random() < rate ? this.randomGene() : c).join("");
+  }
+
 }
 
-function currentBest(population, scores) {
-  return population.reduce((a, b) => scores[b] > scores[a] ? b : a);
-}
+class GA {
 
-function randomPopulation(popSize, stringLength) {
-  return Array(popSize).fill(stringLength).map(randomString);
-}
+  constructor(problem, logger, isDone = (c) => c.fitness == 1.0, parentSelector = topN) {
+    this.problem = problem;
+    this.logger = logger;
+    this.isDone = isDone;
+    this.parentSelector = parentSelector;
+    this.chanceToBeParent = 0.5; // hardwire for now
+  }
 
-function randomString(n) {
-  return Array(n).fill().map(randomCharacter).join("");
-}
+  randomPopulation(size) {
+    return Array(size).fill().map(() => this.problem.randomDNA());
+  }
 
-function randomCharacter() {
-  return alphabet[Math.floor(Math.random() * alphabet.length)];
-}
+  withFitness(population) {
+    return population.map((c) => ({ dna: c, fitness: this.problem.fitness(c) }));
+  }
 
-function selectParentsTopHalf(population, scores) {
-  return Array.from(population)
-    .sort((a, b) => scores[b] - scores[a])
-    .slice(0, Math.floor(population.length / 2));
-}
-
-function selectParentsWeightedRandom(population, scores) {
-  let draw = voss_alias_table(population, scores);
-  return Array(population.length / 2).fill().map(draw);
-}
-
-const selectParents = true ? selectParentsTopHalf : selectParentsWeightedRandom;
-
-function makeBabies(parents, mutationRate) {
-  let matches = shuffle(Array.from(parents));
-  let babies = [];
-  for (let i = 0; i < matches.length - 1; i += 2) {
-    for (let j = 0; j < 2; j++) {
-      for (let b of cross(matches[i], matches[i + 1])) {
-        babies.push(mutate(b, mutationRate));
+  nextGeneration(parents, size, mutationRate) {
+    let matches = shuffle(Array.from(parents));
+    let perPair = Math.floor(size / (matches.length / 2));
+    let next = [];
+    for (let i = 0; i < matches.length - 1; i += 2) {
+      for (let j = 0; j < perPair; j++) {
+        let crossed = this.problem.cross(matches[i].dna, matches[i + 1].dna, mutationRate);
+        next.push(this.problem.mutate(crossed));
       }
     }
+    return next;
   }
-  return babies;
-}
 
-function cross(p1, p2) {
-  let cross = Math.floor(Math.random() * p1.length);
-  return [
-    Array.from(p1).map((c, i) => (i > cross ? p2[i] : c)).join(""),
-    Array.from(p2).map((c, i) => (i > cross ? p1[i] : c)).join(""),
-  ];
-}
+  run(populationSize, maxGenerations, mutationRate = 0.05) {
+    let population = this.randomPopulation(populationSize);
 
-function mutate(critter, rate) {
-  return Array.from(critter).map(c => Math.random() < rate ? randomCharacter() : c).join("");
-}
-
-function allScores(target, population) {
-  let scores = {};
-  for (let critter of population) {
-    if (!(critter in scores)) {
-      scores[critter] = fitness(target, critter);
+    for (let i = 0; i < maxGenerations; i++) {
+      let scored = this.withFitness(population);
+      let best = scored.reduce((a, b) => a.fitness > b.fitness ? a : b);
+      //console.log(scored);
+      this.logger(i, scored, best);
+      if (this.isDone(best)) {
+        break;
+      }
+      let parents = this.parentSelector(scored, scored.length * this.chanceToBeParent);
+      population = this.nextGeneration(parents, populationSize, mutationRate);
     }
   }
-  return scores;
 }
 
-function fitness(target, critter) {
-  return Array.from(critter).map((c, i) => (target[i] === c)).reduce((a, b) => a + b);
+function choose(elements) {
+  return elements[Math.floor(Math.random() * elements.length)];
 }
 
-function logCurrentState(i, scores, population, mostFit) {
-  let num = Object.keys(scores).length;
-  let best = Object.values(scores).reduce((a, b) => Math.max(a, b));
-  let worst = Object.values(scores).reduce((a, b) => Math.min(a, b));
-  let avg = Array.from(population).reduce((acc, c) => acc + scores[c], 0) / population.length;
 
-  console.log(`Generation ${i}: ${num} unique critters out of ${population.length}`);
-  console.log(`Average fitness: ${avg}. Most fit: ${best}. Least fit: ${worst}`);
-  console.log(`Current best: ${mostFit}\n`);
+// Possible parent selection algorithms.
+
+function topN(scored, size) {
+  return Array.from(scored).sort((a, b) => b.fitness - a.fitness).slice(0, size);
 }
+
+function fitnessWeighted(scored, size) {
+  return Array(size).fill().map(randomizer(scored));
+}
+
+function logCurrentState(i, scored, best) {
+  let num = Object.keys(scored).length;
+  let unique = countUnique(scored.map(x => x.dna));
+  let max = scored.reduce((acc, b) => Math.max(acc, b.fitness), -Infinity);
+  let min = scored.reduce((acc, b) => Math.min(acc, b.fitness), Infinity);
+  let avg = scored.reduce((acc, b) => acc + b.fitness, 0) / scored.length;
+
+  let div = document.createElement("div");
+
+  function log(x) {
+    let e = document.createElement("p");
+    e.innerHTML = x;
+    div.append(e);
+  }
+
+  log(`Generation ${i}: ${unique} unique critters out of ${num}`);
+  log(`Most fit: ${max.toFixed(2)}. Average: ${avg.toFixed(2)}. Least fit: ${min.toFixed(2)}`);
+  log(`Current best: ${best.dna}\n`);
+
+  document.getElementById("results").append(div);
+
+}
+
+function countUnique(xs) {
+  let d = {};
+  xs.forEach((x) => d[x] = true);
+  //console.log(d);
+  return Object.keys(d).length;
+}
+
 
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -102,12 +161,21 @@ function shuffle(array) {
   return array;
 }
 
+function randomizer(scored) {
+  let n = scored.length;
+  let total = scored.reduce((acc, b) => acc + b.fitness, 0);
+  let probabilities = scored.map(c => n * c.fitness / total);
+  let draw_random_index = voss_alias_table(probabilities);
+  return () => scored[draw_random_index()];
+}
 
-function voss_alias_table(population, scores) {
+function voss_alias_table(p) {
+  // Given an array of probabilities returns a function that
+  // returns a random index into the array weighted by the
+  // probabilities in the array.
+  //
   // See https://www.keithschwarz.com/darts-dice-coins/
-  let n = population.length;
-  let total = population.reduce((acc, c) => acc + scores[c], 0);
-  let p = population.map(c => n * scores[c]/total);
+  let n = p.length;
   let prob = Array(n).fill();
   let alias = Array(n).fill();
   let small = [];
@@ -130,20 +198,20 @@ function voss_alias_table(population, scores) {
     prob[small.pop()] = 1;
   }
   return () => {
-      let i = Math.floor(Math.random() * n);
-      return population[Math.random() < prob[i] ? i : alias[i]];
-    };
+    let i = Math.floor(Math.random() * n);
+    return Math.random() < prob[i] ? i : alias[i];
+  };
 }
 
 function check_draw(scores, iters) {
   let tot = Object.values(scores).reduce((a, b) => a + b);
 
-  let draw = voss_alias_table(Object.keys(scores), scores);
+  let draw = randomizer(Object.keys(scores), scores);
   let r = {};
   for (let i = 0; i < iters; i++) {
     let k = draw();
-    if (k in r) { 
-      r[k]++; 
+    if (k in r) {
+      r[k]++;
     } else {
       r[k] = 1;
     }
@@ -154,7 +222,7 @@ function check_draw(scores, iters) {
   let output = {};
   for (let k in scores) {
     input[k] = scores[k] / tot;
-    output[k] = r[k] / tot2; 
+    output[k] = r[k] / tot2;
   }
 
   return {
@@ -165,8 +233,13 @@ function check_draw(scores, iters) {
 }
 
 function check(iters) {
-  return check_draw({a: 4, b: 3, c: 2, d: 0}, iters);
+  return check_draw({ a: 4, b: 3, c: 2, d: 0 }, iters);
 }
 
 
-run(phrase, 2000, 1000);
+let problem = new PhraseGeneration(phrase, alphabet);
+
+let ga = new GA(problem, logCurrentState);
+//ga.parentSelector = fitnessWeighted;
+
+ga.run(2000, 200);
