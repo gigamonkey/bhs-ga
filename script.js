@@ -26,10 +26,12 @@ function call(name, ...args) {
   ga.postMessage({ name: name, args: args });
 }
 
-let cities = randomCities("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 100, 100);
+let xcities = randomCities("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 100, 100);
 let knownBest = "Unknown"; // {dna: ["F","E","A","C","I","G","J","K","D","H","B"], fitness: -333.8635783212178};
 
-let xcities = [{"name":"A","x":13,"y":36},{"name":"B","x":47,"y":66},{"name":"C","x":7,"y":2},{"name":"D","x":89,"y":45},{"name":"E","x":19,"y":85},{"name":"F","x":34,"y":68},{"name":"G","x":68,"y":1},{"name":"H","x":81,"y":77},{"name":"I","x":59,"y":24},{"name":"J","x":91,"y":7},{"name":"K","x":96,"y":34}];
+let cities = [{"name":"A","x":28,"y":69},{"name":"B","x":35,"y":94},{"name":"C","x":85,"y":42},{"name":"D","x":3,"y":92},{"name":"E","x":18,"y":87},{"name":"F","x":22,"y":18},{"name":"G","x":80,"y":58},{"name":"H","x":94,"y":86},{"name":"I","x":95,"y":65},{"name":"J","x":58,"y":6},{"name":"K","x":20,"y":8},{"name":"L","x":69,"y":88},{"name":"M","x":95,"y":23},{"name":"N","x":9,"y":78},{"name":"O","x":25,"y":29},{"name":"P","x":94,"y":64},{"name":"Q","x":90,"y":48},{"name":"R","x":84,"y":28},{"name":"S","x":18,"y":37},{"name":"T","x":91,"y":2},{"name":"U","x":90,"y":82},{"name":"V","x":64,"y":74},{"name":"W","x":22,"y":86},{"name":"X","x":15,"y":44},{"name":"Y","x":67,"y":13},{"name":"Z","x":59,"y":99}];
+
+//console.log(JSON.stringify(cities));
 
 call('runTSP', cities, 5000, 200, knownBest);
 

@@ -66,10 +66,13 @@ class TravelingSalesman {
   }
 
   randomDNA() {
-    // Since we compute the distance in a loop, might as well always
-    // start with the same city. This is equivalent to making a random
-    // permutation of all the elements and then cycling it around until 
-    // at starts with names[0].
+    // In theory we could normalize the genes so the first city is always 
+    // in the first position. But if so we need to be smart about mutation
+    // to make sure we can fully explore the space. Basically mutate include
+    // the first position in the mutations and then put the DNA back into the
+    // canonical order. Though it's not clear that it might not actually be
+    // good to have more diversity in the form of different starting positions.
+    // Not sure.
     return shuffled(this.names);
   }
 
@@ -114,6 +117,9 @@ class TravelingSalesman {
   mutate(dna, rate) {
     if (Math.random() < rate) {
       this.mutateSmallSwap(dna);
+    }
+    if (Math.random() < rate) {
+      dna.reverse();
     }
     return dna;
   }
