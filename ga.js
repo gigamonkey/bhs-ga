@@ -70,7 +70,7 @@ class TravelingSalesman {
     // start with the same city. This is equivalent to making a random
     // permutation of all the elements and then cycling it around until 
     // at starts with names[0].
-    return [this.names[0]].concat(shuffled(this.names.slice(1)))
+    return shuffled(this.names);
   }
 
   fitness(dna) {
@@ -92,7 +92,7 @@ class TravelingSalesman {
 
     let child = Array(p1.length).fill(null);
 
-    let start = randomInt(1, p1.length);
+    let start = randomInt(0, p1.length);
     let end = randomInt(start + 1, p1.length + 1);
     let seen = {};
 
@@ -119,13 +119,13 @@ class TravelingSalesman {
   }
 
   mutateSmallSwap(dna) {
-    let i = randomInt(1, dna.length - 1);
+    let i = randomInt(0, dna.length - 1);
     [dna[i], dna[i + 1]] = [dna[i + 1], dna[i]];
   }
 
   mutateBigSwap(dna) {
     // mutate by swapping two cities other than the zeroth.
-    let i = randomInt(1, dna.length);
+    let i = randomInt(0, dna.length);
     let j = randomInt(i + 1, dna.length);
     [dna[i], dna[j]] = [dna[j], dna[i]]
   }
@@ -326,8 +326,7 @@ function randomCities(names, width, height) {
 
 function bruteForceTPS(prob) {
   let best = { dna: null, fitness: -Infinity };
-  for (let dnaTail of permutations(prob.names.slice(1))) {
-    let dna = [prob.names[0], ...dnaTail];
+  for (let dna of permutations(prob.names)) {
     let f = prob.fitness(dna);
     if (f > best.fitness) {
       best.dna = dna;
