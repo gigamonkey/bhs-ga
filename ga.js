@@ -59,6 +59,94 @@ class PhraseGeneration {
   }
 }
 
+class TravelingSalesman {
+  constructor(cities) {
+    this.names = cities.map(c => c.name);
+    this.distances = computeDistances(cities);
+  }
+
+  randomDNA() {
+    // Since we compute the distance in a loop, might as well always
+    // start with the same city. This is equivalent to making a random
+    // permutation of all the elements and then cycling it around until 
+    // at starts with names[0].
+    return [this.names[0]].concat(shuffled(this.names.slice(1)))
+  }
+
+  fitness(dna) {
+    // Distance traveled in a complete loop of the cities.
+    let d = 0;
+    let prev = dna[0];
+    for (let i = 1; i < dna.length; i++) {
+      d += this.distances[prev][dna[i]];
+      prev = dna[i];
+    }
+    // Close the loop
+    return -1 * (d + this.distances[prev][dna[0]]);
+  }
+
+  cross(p1, p2) {
+    // Need to preserve invariant that DNA contains all cities.
+    // In general want to preserve some amount of ordering from
+    // the parents otherwise we've just destroyed them.
+
+    let child = Array(p1.length).fill(null);
+
+    let start = randomInt(1, p1.length);
+    let end = randomInt(start + 1, p1.length + 1);
+    let seen = {};
+
+    for (let i = start; i < end; i++) {
+      child[i] = p1[i];
+      seen[p1[i]] = true;
+    }
+
+    let leftOver = p2.filter((c) => !(c in seen));
+
+    for (let i = 0; i < child.length; i++) {
+      if (child[i] == null) {
+        child[i] = leftOver.shift();
+      }
+    }
+    return child;
+  }
+
+  mutate(dna, rate) {
+    // mutate by swapping two cities other than the zeroth.
+    if (Math.random() < rate) {
+      let i = randomInt(1, dna.length);
+      let j = randomInt(i + 1, dna.length);
+      [dna[i], dna[j]] = [dna[j], dna[i]]
+    }
+    return dna;
+  }
+
+}
+
+function computeDistances(cities) {
+  let distances = {};
+  for (let city of cities) {
+    distances[city.name] = distancesFrom(city, cities, distances);
+  }
+  return distances;
+}
+
+function distancesFrom(c1, cities, distances) {
+  let to = {};
+  for (let c2 of cities) {
+    if (c2.name in distances) {
+      to[c2.name] = distances[c2.name][c1.name];
+    } else {
+      let dx = Math.abs(c1.x - c2.x);
+      let dy = Math.abs(c1.y - c2.y);
+      let d = Math.sqrt(dx * dx + dy * dy);
+      to[c2.name] = d;
+    }
+  }
+  return to;
+}
+
+
 class GA {
 
   constructor(problem, logger, isDone = (c) => c.fitness == 1.0, parentSelector = topN) {
@@ -78,7 +166,7 @@ class GA {
   }
 
   nextGeneration(parents, size, mutationRate) {
-    let matches = shuffle(Array.from(parents));
+    let matches = shuffled(parents);
     let perPair = Math.floor(size / (matches.length / 2));
     let next = [];
     for (let i = 0; i < matches.length - 1; i += 2) {
@@ -115,6 +203,13 @@ function choose(elements) {
   return elements[Math.floor(Math.random() * elements.length)];
 }
 
+
+
+function randomInt(start, end) {
+  // Random int on half-open interval [start, end)
+  return start + Math.floor(Math.random() * (end - start));
+}
+
 // Possible parent selection algorithms.
 
 /*
@@ -136,10 +231,10 @@ function summarize(generation, scored) {
   let max = -Infinity;
   let total = 0;
   let best = null;
-  
+
   for (let c of scored) {
     if (c.fitness > max) {
-      best = c.dna;
+      best = c;
     }
     min = Math.min(min, c.fitness);
     max = Math.max(max, c.fitness);
@@ -161,7 +256,8 @@ function countUnique(xs) {
   return Object.keys(Object.fromEntries(xs.map(x => [x, true]))).length
 }
 
-function shuffle(array) {
+function shuffled(orig) {
+  let array = Array.from(orig);
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
@@ -211,10 +307,40 @@ function voss_alias_table(p) {
   };
 }
 
-let problem = new PhraseGeneration(phrase, alphabet);
+function randomCities(names, width, height) {
+  return Array.from(names).map(n => ({
+    name: n,
+    x: randomInt(0, width),
+    y: randomInt(0, height)
+  }));
+}
 
-onmessage = function(e) {
-  let [popSize, generations] = e.data;
+
+
+function dispatch(x) {
+  if (x.name in self) {
+    self[x.name].apply(self, x.args);
+  } else {
+    throw Error("No such function " + x.name);
+  }
+}
+
+function check() {
+  let cities = randomCities("abcd", 100, 100);
+  let prob = new TravelingSalesman(cities);
+  postMessage(prob);
+}
+
+
+function runToBeOrNot(popSize, generations) {
+  let problem = new PhraseGeneration(phrase, alphabet);
   new GA(problem, (g, s) => postMessage(summarize(g, s))).run(popSize, generations);
 }
+
+function runTSP(cities, popSize, generations) {
+  let problem = new TravelingSalesman(randomCities(cities, 100, 100));
+  new GA(problem, (g, s) => postMessage(summarize(g, s))).run(popSize, generations);
+}
+
+onmessage = e => dispatch(e.data);
 
