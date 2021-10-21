@@ -112,13 +112,22 @@ class TravelingSalesman {
   }
 
   mutate(dna, rate) {
-    // mutate by swapping two cities other than the zeroth.
     if (Math.random() < rate) {
-      let i = randomInt(1, dna.length);
-      let j = randomInt(i + 1, dna.length);
-      [dna[i], dna[j]] = [dna[j], dna[i]]
+      this.mutateSmallSwap(dna);
     }
     return dna;
+  }
+
+  mutateSmallSwap(dna) {
+    let i = randomInt(1, dna.length - 1);
+    [dna[i], dna[i + 1]] = [dna[i + 1], dna[i]];
+  }
+
+  mutateBigSwap(dna) {
+    // mutate by swapping two cities other than the zeroth.
+    let i = randomInt(1, dna.length);
+    let j = randomInt(i + 1, dna.length);
+    [dna[i], dna[j]] = [dna[j], dna[i]]
   }
 
 }
@@ -178,7 +187,7 @@ class GA {
     return next;
   }
 
-  run(populationSize, maxGenerations, mutationRate = 0.05) {
+  run(populationSize, maxGenerations, mutationRate = 0.01) {
     let population = this.withFitness(this.randomPopulation(populationSize));
 
     for (let i = 0; i < maxGenerations; i++) {
@@ -315,7 +324,40 @@ function randomCities(names, width, height) {
   }));
 }
 
+function bruteForceTPS(prob) {
+  let best = { dna: null, fitness: -Infinity };
+  for (let dnaTail of permutations(prob.names.slice(1))) {
+    let dna = [prob.names[0], ...dnaTail];
+    let f = prob.fitness(dna);
+    if (f > best.fitness) {
+      best.dna = dna;
+      best.fitness = f;
+    }
+  }
+  return best;
+}
 
+function* permutations(xs) {
+  if (xs.length == 1) {
+    yield xs;
+  } else {
+    let [head, ...tail] = xs
+    for (let p of permutations(tail)) {
+      for (let i = 0; i < p.length; i++) {
+        yield p.slice(0, i).concat([head]).concat(p.slice(i));
+      }
+      yield p.concat([head]);
+    }
+  }
+}
+
+function testPerms() {
+  let v = [];
+  for (let p of permutations(Array.from("abcdef"))) {
+    v.push(p.slice(0));
+  }
+  postMessage(v.length);
+}
 
 function dispatch(x) {
   if (x.name in self) {
@@ -328,18 +370,28 @@ function dispatch(x) {
 function check() {
   let cities = randomCities("abcd", 100, 100);
   let prob = new TravelingSalesman(cities);
-  postMessage(prob);
+  bruteForceTPS(prob);
 }
 
 
 function runToBeOrNot(popSize, generations) {
   let problem = new PhraseGeneration(phrase, alphabet);
-  new GA(problem, (g, s) => postMessage(summarize(g, s))).run(popSize, generations);
+  let ga = new GA(problem, (g, s) => postMessage(summarize(g, s)));
+  ga.parentSelector = fitnessWeighted;
+  ga.run(popSize, generations);
 }
 
-function runTSP(cities, popSize, generations) {
-  let problem = new TravelingSalesman(randomCities(cities, 100, 100));
-  new GA(problem, (g, s) => postMessage(summarize(g, s))).run(popSize, generations);
+function runTSP(cities, popSize, generations, knownBest) {
+  let problem = new TravelingSalesman(cities);
+  if (!knownBest) {
+    let answer = bruteForceTPS(problem);
+    postMessage({ answer: answer });
+  } else {
+    postMessage({ answer: knownBest });
+  }
+  let ga = new GA(problem, (g, s) => postMessage(summarize(g, s)))
+  ga.parentSelector = topN;
+  ga.run(popSize, generations, 0.2);
 }
 
 onmessage = e => dispatch(e.data);
