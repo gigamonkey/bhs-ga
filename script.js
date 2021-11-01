@@ -33,9 +33,7 @@ let cities = [{"name":"A","x":28,"y":69},{"name":"B","x":35,"y":94},{"name":"C",
 
 //console.log(JSON.stringify(cities));
 
-call('runTSP', cities, 5000, 200, knownBest);
-
-//call('check');
+call('runTSP', cities, 2000, 200, knownBest);
 
 function logSummary(s) {
   if ('answer' in s) {
@@ -52,8 +50,14 @@ function logSummary(s) {
     log(s.max.toFixed(2));
     log(s.avg.toFixed(2));
     log(s.min.toFixed(2));
-    log(s.best.dna);
+    log(kludge(s.best.dna));
 
     row.scrollIntoView();
   }
+}
+
+// For displaying TSP genomes in canonical form.
+function kludge(dna) {
+  let i = dna.indexOf("A");
+  return dna.slice(i).concat(dna.slice(0, i));
 }
